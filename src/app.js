@@ -6,6 +6,7 @@ const User = require('./model/user');
 const { validateUser } = require('./utils/validation');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const { userAuth, isPasswordValid } = require('./utils/middleware');
 const app = express();
 
 app.use(express.json());
@@ -28,85 +29,16 @@ app.post('/signup', validateUser, async (req, res) => {
   }
 });
 
-app.get('/feed', async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.status(200).json(users);
-  } catch (error) {
-    res.status(500).json({ error: 'Error fetching users' });
-  }
-});
-
-app.get('/user', async (req, res) => {
-  const { email } = req.body;
-  try {
-    const user = await User.findOne({ email });
-    if (user) {
-      res.status(200).json(user);
-    } else {
-      res.status(404).json({ error: 'User not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Error fetching user' });
-  }
-});
-
-app.delete('/user/:userId', async (req, res) => {
-  const { userId } = req?.params;
-  try {
-    const result = await User.findByIdAndDelete(userId);
-    if (result) {
-      res.status(200).json({ message: 'User deleted successfully' });
-    } else {
-      res.status(404).json({ error: 'User not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Error deleting user' });
-  }
-});
-
-app.patch('/update/:userId', validateUser, async (req, res) => {
-  const { userId } = req?.params;
-
-  try {
-    const allowedUpdates = ['skills', 'age', 'gender', 'photo', 'password'];
-    const updates = Object.keys(req.body);
-    const isValidOperation = updates.every((update) =>
-      allowedUpdates.includes(update),
-    );
-
-    if (!isValidOperation) {
-      return res.status(400).json({ error: 'Invalid updates' });
-    }
-
-    // Hash password if it's being updated
-    const updateData = { ...req.body };
-    if (updateData.password) {
-      updateData.password = await bcrypt.hash(updateData.password, 10);
-    }
-
-    const user = await User.findByIdAndUpdate(userId, updateData, {
-      returnDocument: 'after',
-      runValidators: true,
-    });
-    if (user) {
-      res.status(200).json(user);
-    } else {
-      res.status(404).json({ error: 'User not found' });
-    }
-  } catch (error) {
-    res.status(500).json({ error: 'Error fetching user' });
-  }
-});
-
-app.post('/login', async (req, res) => {
+app.post('/login', validateUser, async (req, res) => {
   const { email, password } = req.body;
   try {
     const user = await User.findOne({ email });
-    console.log(user);
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
-      res.cookie('token', token);
+    if (user && (await user.isPasswordValid(password))) {
+      const token = user.getAuthToken();
+
+      res.cookie('token', token, {
+        expires: new Date(Date.now() + 8 * 3600000), // cookie will be removed after 8 hours
+      });
       res.status(200).json({ message: 'Login successful' });
     } else {
       res.status(400).json({ error: 'Invalid email or password' });
@@ -116,22 +48,26 @@ app.post('/login', async (req, res) => {
   }
 });
 
-app.get('/profile', async (req, res) => {
-  const token = req.cookies.token;
+app.get('/profile', userAuth, async (req, res) => {
   try {
-    if (!token) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("=====>> ",decoded);
-    const user = await User.findById(decoded.userId);
-    if (user) {
-      res.status(200).json(user);
+    if (req?.user) {
+      res.status(200).json(req?.user);
     } else {
       res.status(404).json({ error: 'User not found' });
     }
   } catch (error) {
     res.status(500).json({ error: 'Error fetching profile' });
+  }
+});
+
+app.post('/sendConnectionRequest', userAuth, async (req, res) => {
+  try {
+    const user = req.user;
+    res
+      .status(200)
+      .json({ message: 'Connection request sent from ' + user.name });
+  } catch (error) {
+    res.status(500).json({ error: 'Error sending connection request' });
   }
 });
 

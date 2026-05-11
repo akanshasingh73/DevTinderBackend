@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
+const bcrypt = require('bcrypt');
 const { PASSWORD_RULES } = require('../utils/validation');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 const userSchema = new mongoose.Schema(
   {
@@ -63,6 +66,24 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   },
 );
+
+userSchema.methods.getAuthToken = function () {
+  const token = jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
+    expiresIn: '7d',
+  });
+  if (!token) {
+    throw new Error('Error generating JWT token');
+  }
+  return token;
+};
+
+userSchema.methods.isPasswordValid = async function (userPassword) {
+  const isMatch = await bcrypt.compare(userPassword, this.password);
+  if (!isMatch) {
+    throw new Error('Invalid password');
+  }
+  return isMatch;
+};
 
 const User = mongoose.model('User', userSchema);
 
