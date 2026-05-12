@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const validator = require('validator');
 const bcrypt = require('bcrypt');
-const { PASSWORD_RULES } = require('../utils/validation');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
@@ -37,11 +36,6 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 8,
       maxlength: 128,
-      validate: {
-        validator: (v) => validator.isStrongPassword(v, PASSWORD_RULES),
-        message:
-          'Password must be at least 8 characters with uppercase, lowercase, number and symbol',
-      },
     },
     gender: {
       type: String,
@@ -64,6 +58,16 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    // FIX 2: toJSON transform — automatically strips sensitive fields
+    // whenever the document is serialized (e.g. res.json(user)).
+    // This means you never accidentally leak password, __v, etc.
+    toJSON: {
+      transform: function (doc, ret) {
+        delete ret.password;
+        delete ret.__v;
+        return ret;
+      },
+    },
   },
 );
 
@@ -71,17 +75,11 @@ userSchema.methods.getAuthToken = function () {
   const token = jwt.sign({ userId: this._id }, process.env.JWT_SECRET, {
     expiresIn: '7d',
   });
-  if (!token) {
-    throw new Error('Error generating JWT token');
-  }
   return token;
 };
 
-userSchema.methods.isPasswordValid = async function (userPassword) {
+userSchema.methods.matchesPassword = async function (userPassword) {
   const isMatch = await bcrypt.compare(userPassword, this.password);
-  if (!isMatch) {
-    throw new Error('Invalid password');
-  }
   return isMatch;
 };
 

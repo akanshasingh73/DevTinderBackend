@@ -1,81 +1,113 @@
-const validator = require('validator');
+const {
+  PASSWORD_RULES,
+  validateName,
+  validateEmail,
+  validatePassword,
+  validateAge,
+  validateGender,
+  validatePhoto,
+  validateSkills,
+} = require('./fieldValidators');
 
-// Password validation rules
-const PASSWORD_RULES = {
-  minLength: 8,
-  minLowercase: 1,
-  minNumbers: 1,
-  minSymbols: 1,
-  minUppercase: 1,
+/**
+ * Helper — runs a field validator only if the value is present,
+ * and pushes any error into the errors object.
+ *
+ * @param {object}  errors      - The errors accumulator
+ * @param {string}  field       - Field name (used as errors key)
+ * @param {*}       value       - The value to validate
+ * @param {fn}      validatorFn - One of the field validators from fieldValidators.js
+ * @param {boolean} required    - If true, also errors when value is missing
+ */
+const applyValidator = (
+  errors,
+  field,
+  value,
+  validatorFn,
+  required = false,
+) => {
+  if (value === undefined || value === null) {
+    if (required) errors[field] = `${field} is required`;
+    return; // optional field not provided — skip
+  }
+  const result = validatorFn(value);
+  if (!result.valid) {
+    errors[field] = result.error;
+  }
 };
 
-// Validate email
-const validateEmail = (email) => {
-  if (!email) {
-    return { valid: false, error: 'Email is required' };
-  }
-  if (!validator.isEmail(email)) {
-    return { valid: false, error: 'Invalid email format' };
-  }
-  return { valid: true };
-};
+// ─── Data validators (pure functions, no Express dependency) ──────────────────
 
-// Validate password
-const validatePassword = (password) => {
-  if (!password) {
-    return { valid: false, error: 'Password is required' };
-  }
-  if (!validator.isStrongPassword(password, PASSWORD_RULES)) {
-    return {
-      valid: false,
-      error:
-        'Password must be at least 8 characters with uppercase, lowercase, number and symbol',
-    };
-  }
-  return { valid: true };
-};
-
-// Validate user data
+// Used by /login — only email + password are checked
 const validateUserData = (data) => {
   const errors = {};
-
-  if (data.email) {
-    const emailValidation = validateEmail(data.email);
-    if (!emailValidation.valid) {
-      errors.email = emailValidation.error;
-    }
-  }
-
-  if (data.password) {
-    const passwordValidation = validatePassword(data.password);
-    if (!passwordValidation.valid) {
-      errors.password = passwordValidation.error;
-    }
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
+  applyValidator(errors, 'email', data.email, validateEmail, true);
+  applyValidator(errors, 'password', data.password, validatePassword, true);
+  return { isValid: Object.keys(errors).length === 0, errors };
 };
 
-// Middleware for user validation
-const validateUser = (req, res, next) => {
-  const validation = validateUserData(req.body);
+// Used by /signup — all fields validated
+const validateSignupData = (data) => {
+  const errors = {};
+  applyValidator(errors, 'name', data.name, validateName, true);
+  applyValidator(errors, 'email', data.email, validateEmail, true);
+  applyValidator(errors, 'password', data.password, validatePassword, true);
+  applyValidator(errors, 'age', data.age, validateAge);
+  applyValidator(errors, 'gender', data.gender, validateGender);
+  applyValidator(errors, 'photo', data.photo, validatePhoto);
+  applyValidator(errors, 'skills', data.skills, validateSkills);
+  return { isValid: Object.keys(errors).length === 0, errors };
+};
 
+// Used by PATCH /profile — only allowlisted fields, no email/password changes
+const validateUserDataForProfileUpdate = (data) => {
+  const errors = {};
+
+  const allowedFields = ['name', 'age', 'gender', 'photo', 'skills'];
+  Object.keys(data).forEach((key) => {
+    if (!allowedFields.includes(key)) {
+      errors[key] = 'This field cannot be updated';
+    }
+  });
+
+  applyValidator(errors, 'name', data.name, validateName);
+  applyValidator(errors, 'age', data.age, validateAge);
+  applyValidator(errors, 'gender', data.gender, validateGender);
+  applyValidator(errors, 'photo', data.photo, validatePhoto);
+  applyValidator(errors, 'skills', data.skills, validateSkills);
+
+  return { isValid: Object.keys(errors).length === 0, errors };
+};
+
+// ─── Express middlewares ───────────────────────────────────────────────────────
+
+// Factory — wraps any data validator function into an Express middleware.
+// This removes the repeated if (!validation.isValid) res.status(400)... pattern.
+const makeValidatorMiddleware = (validatorFn) => (req, res, next) => {
+  const validation = validatorFn(req.body);
   if (!validation.isValid) {
     return res.status(400).json({ errors: validation.errors });
   }
-
   next();
 };
 
-
+const validateUser = makeValidatorMiddleware(validateUserData);
+const validateSignup = makeValidatorMiddleware(validateSignupData);
+const validateProfileUpdate = makeValidatorMiddleware(
+  validateUserDataForProfileUpdate,
+);
 
 module.exports = {
+  // Re-export so other files only need to import from validation.js
   validateEmail,
   validatePassword,
-  validateUserData,
-  validateUser,
   PASSWORD_RULES,
+  // Data validators (useful for unit testing without Express)
+  validateUserData,
+  validateSignupData,
+  validateUserDataForProfileUpdate,
+  // Express middlewares
+  validateUser,
+  validateSignup,
+  validateProfileUpdate,
 };
