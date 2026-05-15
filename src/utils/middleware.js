@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const User = require('../model/user');
+const mongoose = require('mongoose');
 
 const userAuth = async (req, res, next) => {
   const token = req.cookies.token;
@@ -19,6 +20,24 @@ const userAuth = async (req, res, next) => {
   }
 };
 
+
+const validateObjectId = (paramName) => (req, res, next) => {
+  if (!mongoose.Types.ObjectId.isValid(req.params[paramName])) {
+    return res.status(400).json({ message: `Invalid ${paramName}` });
+  }
+  next();
+};
+
+
+const validateStatus = (allowedStatuses) => (req, res, next) => {
+  if (!allowedStatuses.includes(req.params.status)) {
+    return res.status(400).json({ message: `Status must be one of: ${allowedStatuses.join(', ')}` });
+  }
+  next();
+};
+
 module.exports = {
   userAuth,
+  validateObjectId,
+  validateStatus,
 };
