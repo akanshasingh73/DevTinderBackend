@@ -4,4 +4,6 @@ const CONNECTION_STATUSES = {
   ALL: ['interested', 'ignored', 'accepted', 'rejected'],
 };
 
-module.exports = { CONNECTION_STATUSES };
+const USER_PUBLIC_FIELDS = 'name email photo skills';
+
+module.exports = { CONNECTION_STATUSES, USER_PUBLIC_FIELDS };
