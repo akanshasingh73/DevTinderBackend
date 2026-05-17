@@ -46,6 +46,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       match: [/^https?:\/\/.+/, 'Please provide a valid URL'],
     },
+    about: {
+      type: String,
+      maxlength: 500,
+      trim: true,
+    },
     skills: {
       type: [String],
       validate: {

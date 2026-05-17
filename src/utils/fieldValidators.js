@@ -83,6 +83,15 @@ const validateSkills = (skills) => {
   return { valid: true };
 };
 
+const validateAbout = (about) => {
+  if (typeof about !== 'string' || about.trim().length > 500) {
+    return {
+      valid: false,
+      error: 'About must be a string up to 500 characters',
+    };
+  }
+  return { valid: true };
+};
 // Single place for bcrypt hashing — SALT_ROUNDS is defined once here.
 // Import and use this instead of calling bcrypt.hash(password, 10) directly
 // in routes, so if you ever change the salt rounds you change it in one place.
@@ -98,5 +107,6 @@ module.exports = {
   validateGender,
   validatePhoto,
   validateSkills,
+  validateAbout,
   hashPassword,
 };

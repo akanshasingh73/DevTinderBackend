@@ -6,7 +6,6 @@ const bcrypt = require('bcrypt');
 const { hashPassword } = require('../utils/fieldValidators');
 require('dotenv').config();
 
-
 router.post('/signup', validateSignup, async (req, res, next) => {
   try {
     const { password } = req.body;
@@ -44,7 +43,7 @@ router.post('/login', validateUser, async (req, res, next) => {
       maxAge: 8 * 60 * 60 * 1000, // 8 hours in milliseconds
     });
 
-    res.status(200).json({ message: 'Login successful' });
+    res.status(200).json({ message: 'Login successful', user });
   } catch (error) {
     next(error);
   }

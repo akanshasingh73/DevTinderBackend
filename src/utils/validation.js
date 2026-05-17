@@ -7,6 +7,7 @@ const {
   validateGender,
   validatePhoto,
   validateSkills,
+  validateAbout,
 } = require('./fieldValidators');
 
 /**
@@ -56,6 +57,7 @@ const validateSignupData = (data) => {
   applyValidator(errors, 'gender', data.gender, validateGender);
   applyValidator(errors, 'photo', data.photo, validatePhoto);
   applyValidator(errors, 'skills', data.skills, validateSkills);
+  applyValidator(errors, 'about', data.about, validateAbout);
   return { isValid: Object.keys(errors).length === 0, errors };
 };
 
@@ -63,7 +65,7 @@ const validateSignupData = (data) => {
 const validateUserDataForProfileUpdate = (data) => {
   const errors = {};
 
-  const allowedFields = ['name', 'age', 'gender', 'photo', 'skills'];
+  const allowedFields = ['name', 'age', 'gender', 'photo', 'skills', 'about'];
   Object.keys(data).forEach((key) => {
     if (!allowedFields.includes(key)) {
       errors[key] = 'This field cannot be updated';
@@ -75,6 +77,7 @@ const validateUserDataForProfileUpdate = (data) => {
   applyValidator(errors, 'gender', data.gender, validateGender);
   applyValidator(errors, 'photo', data.photo, validatePhoto);
   applyValidator(errors, 'skills', data.skills, validateSkills);
+  applyValidator(errors, 'about', data.about, validateAbout);
 
   return { isValid: Object.keys(errors).length === 0, errors };
 };
