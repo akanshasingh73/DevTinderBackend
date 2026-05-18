@@ -3,6 +3,7 @@ const router = express.Router();
 const ConnectionRequest = require('../model/connectionRequest');
 const { userAuth } = require('../utils/middleware');
 const { USER_PUBLIC_FIELDS } = require('../utils/constants');
+const User = require('../model/user');
 
 router.get('/user/requests/received', userAuth, async (req, res, next) => {
   try {

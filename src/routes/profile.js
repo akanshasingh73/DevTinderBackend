@@ -13,7 +13,7 @@ router.get('/profile/view', userAuth, async (req, res, next) => {
   }
 });
 
-router.patch(
+router.post(
   '/profile/update',
   userAuth,
   validateProfileUpdate,
@@ -35,7 +35,7 @@ router.patch(
   },
 );
 
-router.patch('/profile/changePassword', userAuth, async (req, res, next) => {
+router.post('/profile/changePassword', userAuth, async (req, res, next) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const loggedInUser = req.user;

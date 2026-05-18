@@ -5,21 +5,25 @@ const cookieParser = require('cookie-parser');
 const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const requestRoutes = require('./routes/request');
-const userRoutes = require('./routes/user'); 
+const userRoutes = require('./routes/user');
 const cors = require('cors');
-
 const app = express();
 
+// app.options('(.*)', cors());
+// app.use(/(.*)/, cors());
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({
-  origin: 'http://localhost:5173/', 
-  credentials: true, 
-}));
+app.use(
+  cors({
+    origin: 'http://localhost:5173/',
+    credentials: true,
+  }),
+);
+// app.options('/{*path}', cors());
 app.use('/', authRoutes);
 app.use('/', profileRoutes);
 app.use('/', requestRoutes);
-app.use('/', userRoutes); 
+app.use('/', userRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
